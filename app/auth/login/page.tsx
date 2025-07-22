@@ -29,11 +29,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('🚀 Début de la connexion depuis la page login');
       await login(email, password);
       toast.success('Connexion réussie !');
       router.push('/game');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Échec de la connexion');
+      console.error('❌ Erreur sur la page login:', error);
+      // L'error vient maintenant du AuthContext et est déjà formatée
+      toast.error(error.message || 'Échec de la connexion');
     } finally {
       setLoading(false);
     }

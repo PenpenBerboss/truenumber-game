@@ -93,7 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🚀 Tentative de connexion...');
       const response = await api.post('/auth/login', { email, password });
+      
+      // Vérifier si la réponse est valide (pas une erreur d'extension)
+      if (!response || response.status === 0) {
+        throw new Error('Erreur de communication avec le serveur');
+      }
+      
       const { token, user } = response.data;
+      
+      if (!token || !user) {
+        throw new Error('Réponse invalide du serveur');
+      }
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -101,6 +111,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('✅ Connexion réussie');
     } catch (error: any) {
       console.error('❌ Erreur de connexion:', error);
+      
+      // Gestion spéciale pour les erreurs d'extensions de navigateur
+      if (error.message && error.message.includes('message channel closed')) {
+        throw new Error('Erreur d\'extension de navigateur. Essayez en mode navigation privée.');
+      }
+      
       if (error.response) {
         // Erreur de réponse du serveur
         throw new Error(error.response.data.message || 'Identifiants incorrects');

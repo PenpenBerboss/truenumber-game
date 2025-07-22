@@ -29,6 +29,13 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Filtrer les erreurs liées aux extensions de navigateur
+    if (error.message && error.message.includes('message channel closed')) {
+      console.warn('⚠️ Erreur extension navigateur ignorée:', error.message);
+      // Ne pas rejeter cette erreur car elle vient des extensions
+      return Promise.resolve({ data: null, status: 0 });
+    }
+    
     console.error('❌ Erreur API:', {
       url: error.config?.url,
       status: error.response?.status,
