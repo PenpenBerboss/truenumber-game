@@ -84,32 +84,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timeout = setTimeout(() => {
       console.warn('⏰ Timeout d\'authentification - déblocage de l\'interface');
       setLoading(false);
-    }, 10000); // 10 secondes max
+    }, 30000); // 30 secondes max pour le cold start de Render
 
     return () => clearTimeout(timeout);
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user } = response.data;
-    
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
+    try {
+      console.log('🚀 Tentative de connexion...');
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+      console.log('✅ Connexion réussie');
+    } catch (error: any) {
+      console.error('❌ Erreur de connexion:', error);
+      if (error.response) {
+        // Erreur de réponse du serveur
+        throw new Error(error.response.data.message || 'Identifiants incorrects');
+      } else if (error.request) {
+        // Erreur de réseau
+        throw new Error('Impossible de contacter le serveur. Vérifiez votre connexion.');
+      } else {
+        // Autre erreur
+        throw new Error('Erreur de connexion: ' + error.message);
+      }
+    }
   };
 
   const register = async (name: string, username: string, email: string, password: string, phone?: string) => {
-    const requestBody: any = { name, username, email, password };
-    if (phone) {
-      requestBody.phone = phone;
+    try {
+      console.log('🚀 Tentative d\'inscription...');
+      const requestBody: any = { name, username, email, password };
+      if (phone) {
+        requestBody.phone = phone;
+      }
+      
+      const response = await api.post('/auth/register', requestBody);
+      const { token, user } = response.data;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+      console.log('✅ Inscription réussie');
+    } catch (error: any) {
+      console.error('❌ Erreur d\'inscription:', error);
+      if (error.response) {
+        throw new Error(error.response.data.message || 'Erreur lors de l\'inscription');
+      } else if (error.request) {
+        throw new Error('Impossible de contacter le serveur. Vérifiez votre connexion.');
+      } else {
+        throw new Error('Erreur d\'inscription: ' + error.message);
+      }
     }
-    
-    const response = await api.post('/auth/register', requestBody);
-    const { token, user } = response.data;
-    
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
   };
 
   const logout = () => {

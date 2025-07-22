@@ -22,6 +22,23 @@ export const api = axios.create({
   },
 });
 
+// Intercepteur de réponse pour log les erreurs
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ Réponse API reçue:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('❌ Erreur API:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
+
 /**
  * Intercepteur de requête pour ajouter automatiquement le token JWT
  * Récupère le token depuis localStorage et l'ajoute aux headers
