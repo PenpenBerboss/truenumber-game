@@ -66,9 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(JSON.parse(storedUser));
           }
         })
-        .catch((error) => {
-          // Token is invalid or backend not available
-          console.warn('Backend non disponible ou token invalide:', error.message);
+        .catch(() => {
+          // Token is invalid
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         })
@@ -78,13 +77,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setLoading(false);
     }
-
-    // Timeout de sécurité pour éviter un loading infini
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000); // 5 secondes max
-
-    return () => clearTimeout(timeout);
   }, []);
 
   const login = async (email: string, password: string) => {
