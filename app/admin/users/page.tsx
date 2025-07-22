@@ -348,14 +348,14 @@ export default function AdminUsersPage() {
                           ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
                           : 'bg-gradient-to-r from-blue-500 to-cyan-500'
                       }`}>
-                        {user.name.charAt(0).toUpperCase()}
+                        {user.name?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       
                       {/* User Info */}
                       <div className="space-y-1">
                         <div className="flex items-center space-x-3">
-                          <h3 className="text-xl font-bold text-gray-900">{user.name}</h3>
-                          <span className="text-sm text-gray-500">@{user.username}</span>
+                          <h3 className="text-xl font-bold text-gray-900">{user.name || user.username || 'Nom non défini'}</h3>
+                          <span className="text-sm text-gray-500">@{user.username || 'username'}</span>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                             user.role === 'admin'
                               ? 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200'
