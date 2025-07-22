@@ -54,29 +54,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // Verify token and get user info
-      api.get('/game/balance')
-        .then(response => {
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          // Verify token and get user info
+          console.log('🔐 Vérification du token...');
+          const response = await api.get('/game/balance');
+          
           // If token is valid, we can get the balance
-          // We need to get user info from somewhere
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             setUser(JSON.parse(storedUser));
+            console.log('✅ Utilisateur authentifié');
           }
-        })
-        .catch(() => {
-          // Token is invalid
+        } catch (error: any) {
+          console.warn('⚠️ Erreur d\'authentification:', error.message);
+          // Token is invalid or backend unavailable
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
+        }
+      }
       setLoading(false);
-    }
+    };
+
+    initAuth();
+    
+    // Timeout de sécurité pour éviter un loading infini
+    const timeout = setTimeout(() => {
+      console.warn('⏰ Timeout d\'authentification - déblocage de l\'interface');
+      setLoading(false);
+    }, 10000); // 10 secondes max
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const login = async (email: string, password: string) => {

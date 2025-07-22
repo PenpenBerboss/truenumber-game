@@ -5,12 +5,21 @@ import axios from 'axios';
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+console.log('🔗 Configuration API:', {
+  url: API_BASE_URL,
+  environment: process.env.NODE_ENV
+});
+
 /**
  * Instance Axios configurée pour les appels API
  * Inclut automatiquement les tokens d'authentification et gère les erreurs
  */
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // Timeout de 30 secondes pour Render (cold start)
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 /**
