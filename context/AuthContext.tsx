@@ -55,38 +55,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
+      console.log('🔄 [AUTH CONTEXT] Début de l\'initialisation...');
       const token = localStorage.getItem('token');
+      
       if (token) {
         try {
           // Verify token and get user info
-          console.log('🔐 Vérification du token...');
+          console.log('🔐 [AUTH CONTEXT] Vérification du token...');
+          console.log('🌐 [AUTH CONTEXT] URL API utilisée:', process.env.NEXT_PUBLIC_API_URL);
+          
           const response = await api.get('/game/balance');
           
           // If token is valid, we can get the balance
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             setUser(JSON.parse(storedUser));
-            console.log('✅ Utilisateur authentifié');
+            console.log('✅ [AUTH CONTEXT] Utilisateur authentifié depuis le cache');
           }
         } catch (error: any) {
-          console.warn('⚠️ Erreur d\'authentification:', error.message);
+          console.warn('⚠️ [AUTH CONTEXT] Erreur d\'authentification:', error.message);
           // Token is invalid or backend unavailable
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
+      } else {
+        console.log('🚫 [AUTH CONTEXT] Aucun token trouvé');
       }
+      
+      console.log('✅ [AUTH CONTEXT] Fin de l\'initialisation, setLoading(false)');
       setLoading(false);
     };
 
-    initAuth();
-    
-    // Timeout de sécurité pour éviter un loading infini
+    // Timeout de sécurité AVANT de démarrer l'initialisation
     const timeout = setTimeout(() => {
-      console.warn('⏰ Timeout d\'authentification - déblocage de l\'interface');
+      console.warn('⏰ [AUTH CONTEXT] Timeout d\'authentification - déblocage forcé de l\'interface');
       setLoading(false);
-    }, 30000); // 30 secondes max pour le cold start de Render
+    }, 10000); // 10 secondes max
 
-    return () => clearTimeout(timeout);
+    // Lancer l'initialisation
+    initAuth().catch((error) => {
+      console.error('❌ [AUTH CONTEXT] Erreur critique dans initAuth:', error);
+      setLoading(false);
+    });
+
+    return () => {
+      console.log('🧹 [AUTH CONTEXT] Cleanup du timeout');
+      clearTimeout(timeout);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

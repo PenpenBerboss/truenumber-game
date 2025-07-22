@@ -59,9 +59,18 @@ api.interceptors.response.use(
  * Récupère le token depuis localStorage et l'ajoute aux headers
  */
 api.interceptors.request.use((config) => {
+  console.log('📤 [API] Requête sortante:', {
+    method: config.method?.toUpperCase(),
+    url: config.url,
+    baseURL: config.baseURL,
+    fullURL: `${config.baseURL}${config.url}`,
+    timestamp: new Date().toISOString()
+  });
+  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log('🔑 [API] Token ajouté aux headers');
   }
   return config;
 });
