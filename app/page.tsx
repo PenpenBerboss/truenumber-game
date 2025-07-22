@@ -84,6 +84,16 @@ export default function Home() {
             <p>Debug: API URL = {process.env.NEXT_PUBLIC_API_URL || 'non définie'}</p>
             <p>Debug: Force Redirect = {forceRedirect.toString()}</p>
             <p>Debug: Environment = {process.env.NODE_ENV}</p>
+            
+            {/* Bouton de déblocage manuel */}
+            {loading && (
+              <button 
+                onClick={() => setForceRedirect(true)}
+                className="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+              >
+                🚨 Débloquer manuellement
+              </button>
+            )}
           </div>
         </div>
       </div>

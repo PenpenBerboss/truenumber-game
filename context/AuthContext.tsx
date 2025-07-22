@@ -54,43 +54,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 [AUTH CONTEXT] useEffect démarré');
+    
     const initAuth = async () => {
       console.log('🔄 [AUTH CONTEXT] Début de l\'initialisation...');
-      const token = localStorage.getItem('token');
       
-      if (token) {
-        try {
-          // Verify token and get user info
-          console.log('🔐 [AUTH CONTEXT] Vérification du token...');
-          console.log('🌐 [AUTH CONTEXT] URL API utilisée:', process.env.NEXT_PUBLIC_API_URL);
-          
-          const response = await api.get('/game/balance');
-          
-          // If token is valid, we can get the balance
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-            console.log('✅ [AUTH CONTEXT] Utilisateur authentifié depuis le cache');
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+          try {
+            // Verify token and get user info
+            console.log('🔐 [AUTH CONTEXT] Vérification du token...');
+            console.log('🌐 [AUTH CONTEXT] URL API utilisée:', process.env.NEXT_PUBLIC_API_URL);
+            
+            const response = await api.get('/game/balance');
+            
+            // If token is valid, we can get the balance
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              setUser(JSON.parse(storedUser));
+              console.log('✅ [AUTH CONTEXT] Utilisateur authentifié depuis le cache');
+            }
+          } catch (error: any) {
+            console.warn('⚠️ [AUTH CONTEXT] Erreur d\'authentification:', error.message);
+            // Token is invalid or backend unavailable
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
           }
-        } catch (error: any) {
-          console.warn('⚠️ [AUTH CONTEXT] Erreur d\'authentification:', error.message);
-          // Token is invalid or backend unavailable
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+        } else {
+          console.log('🚫 [AUTH CONTEXT] Aucun token trouvé');
         }
-      } else {
-        console.log('🚫 [AUTH CONTEXT] Aucun token trouvé');
+      } catch (error) {
+        console.error('❌ [AUTH CONTEXT] Erreur dans le try principal:', error);
       }
       
       console.log('✅ [AUTH CONTEXT] Fin de l\'initialisation, setLoading(false)');
       setLoading(false);
     };
 
-    // Timeout de sécurité AVANT de démarrer l'initialisation
+    // Timeout de sécurité TRÈS agressif pour Vercel
     const timeout = setTimeout(() => {
-      console.warn('⏰ [AUTH CONTEXT] Timeout d\'authentification - déblocage forcé de l\'interface');
+      console.warn('⏰ [AUTH CONTEXT] Timeout 5s - déblocage forcé de l\'interface');
       setLoading(false);
-    }, 10000); // 10 secondes max
+    }, 5000); // 5 secondes seulement
+
+    // Timeout de secours encore plus agressif
+    const emergencyTimeout = setTimeout(() => {
+      console.error('🚨 [AUTH CONTEXT] Timeout d\'urgence 2s - déblocage d\'urgence');
+      setLoading(false);
+    }, 2000); // 2 secondes
 
     // Lancer l'initialisation
     initAuth().catch((error) => {
@@ -99,8 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      console.log('🧹 [AUTH CONTEXT] Cleanup du timeout');
+      console.log('🧹 [AUTH CONTEXT] Cleanup des timeouts');
       clearTimeout(timeout);
+      clearTimeout(emergencyTimeout);
     };
   }, []);
 
