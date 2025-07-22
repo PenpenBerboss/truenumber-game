@@ -8,23 +8,50 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [forceRedirect, setForceRedirect] = useState(false);
+
+  // Logs pour débugger le problème de chargement
+  console.log('🏠 [HOME PAGE] État actuel:', {
+    user: user ? `${user.name} (${user.email})` : 'null',
+    loading,
+    forceRedirect,
+    timestamp: new Date().toISOString()
+  });
 
   useEffect(() => {
-    if (!loading) {
+    console.log('🏠 [HOME PAGE] useEffect déclenché:', { user: !!user, loading, forceRedirect });
+    
+    if (!loading || forceRedirect) {
       if (user) {
+        console.log('🏠 [HOME PAGE] Utilisateur connecté, redirection vers /game');
         router.push('/game');
       } else {
+        console.log('🏠 [HOME PAGE] Pas d\'utilisateur, redirection vers /auth/login');
         router.push('/auth/login');
       }
+    } else {
+      console.log('🏠 [HOME PAGE] En cours de chargement, attente...');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, forceRedirect]);
+
+  // Timeout de sécurité pour forcer la redirection
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⏰ [HOME PAGE] Timeout de sécurité - forçage de la redirection');
+        setForceRedirect(true);
+      }
+    }, 15000); // 15 secondes max
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
   // Affichage du loading pendant la vérification d'authentification
   if (loading) {
@@ -49,6 +76,16 @@ export default function Home() {
             TrueNumber
           </h1>
           <p className="text-gray-600">Chargement de votre expérience de jeu...</p>
+          
+          {/* Informations de debug en mode développement */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 text-xs text-gray-500 max-w-md">
+              <p>Debug: Loading = {loading.toString()}</p>
+              <p>Debug: User = {user ? 'connecté' : 'non connecté'}</p>
+              <p>Debug: API URL = {process.env.NEXT_PUBLIC_API_URL || 'non définie'}</p>
+              <p>Debug: Force Redirect = {forceRedirect.toString()}</p>
+            </div>
+          )}
         </div>
       </div>
     );
