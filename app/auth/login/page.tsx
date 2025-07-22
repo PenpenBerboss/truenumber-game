@@ -29,15 +29,28 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log('🚀 Début de la connexion depuis la page login');
+      console.log('🚀 [LOGIN PAGE] Début de la connexion depuis la page login');
+      console.log('📧 [LOGIN PAGE] Email:', email);
+      console.log('⏰ [LOGIN PAGE] Timestamp:', new Date().toISOString());
+      
       await login(email, password);
+      
+      console.log('✅ [LOGIN PAGE] Connexion réussie, redirection vers /game');
       toast.success('Connexion réussie !');
-      router.push('/game');
+      
+      // Délai pour voir les logs avant la navigation
+      setTimeout(() => {
+        router.push('/game');
+      }, 1000);
+      
     } catch (error: any) {
-      console.error('❌ Erreur sur la page login:', error);
+      console.error('❌ [LOGIN PAGE] Erreur sur la page login:', error);
+      console.error('❌ [LOGIN PAGE] Message d\'erreur:', error.message);
+      console.error('❌ [LOGIN PAGE] Stack trace:', error.stack);
       // L'error vient maintenant du AuthContext et est déjà formatée
       toast.error(error.message || 'Échec de la connexion');
     } finally {
+      console.log('🏁 [LOGIN PAGE] Fin du processus de connexion');
       setLoading(false);
     }
   };

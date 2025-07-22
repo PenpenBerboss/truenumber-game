@@ -25,22 +25,30 @@ export const api = axios.create({
 // Intercepteur de réponse pour log les erreurs
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Réponse API reçue:', response.status, response.config.url);
+    console.log('✅ [API] Réponse API reçue:', {
+      status: response.status,
+      url: response.config.url,
+      method: response.config.method?.toUpperCase(),
+      timestamp: new Date().toISOString()
+    });
     return response;
   },
   (error) => {
     // Filtrer les erreurs liées aux extensions de navigateur
     if (error.message && error.message.includes('message channel closed')) {
-      console.warn('⚠️ Erreur extension navigateur ignorée:', error.message);
+      console.warn('⚠️ [API] Erreur extension navigateur ignorée:', error.message);
       // Ne pas rejeter cette erreur car elle vient des extensions
       return Promise.resolve({ data: null, status: 0 });
     }
     
-    console.error('❌ Erreur API:', {
+    console.error('❌ [API] Erreur API:', {
       url: error.config?.url,
+      method: error.config?.method?.toUpperCase(),
       status: error.response?.status,
+      statusText: error.response?.statusText,
       message: error.message,
-      data: error.response?.data
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
     });
     return Promise.reject(error);
   }

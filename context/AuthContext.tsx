@@ -91,39 +91,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('🚀 Tentative de connexion...');
+      console.log('🚀 [AUTH CONTEXT] Tentative de connexion...');
+      console.log('📧 [AUTH CONTEXT] Email:', email);
+      console.log('🌐 [AUTH CONTEXT] URL API:', process.env.NEXT_PUBLIC_API_URL);
+      
       const response = await api.post('/auth/login', { email, password });
+      
+      console.log('📦 [AUTH CONTEXT] Réponse reçue:', response.status, response.statusText);
       
       // Vérifier si la réponse est valide (pas une erreur d'extension)
       if (!response || response.status === 0) {
+        console.error('❌ [AUTH CONTEXT] Réponse invalide:', response);
         throw new Error('Erreur de communication avec le serveur');
       }
       
       const { token, user } = response.data;
+      console.log('🔑 [AUTH CONTEXT] Token reçu:', token ? 'OUI' : 'NON');
+      console.log('👤 [AUTH CONTEXT] User reçu:', user ? 'OUI' : 'NON');
       
       if (!token || !user) {
+        console.error('❌ [AUTH CONTEXT] Données manquantes:', { token: !!token, user: !!user });
         throw new Error('Réponse invalide du serveur');
       }
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       setUser(user);
-      console.log('✅ Connexion réussie');
+      console.log('✅ [AUTH CONTEXT] Connexion réussie, utilisateur défini');
+      console.log('👤 [AUTH CONTEXT] Utilisateur connecté:', user.name, user.email);
+      
     } catch (error: any) {
-      console.error('❌ Erreur de connexion:', error);
+      console.error('❌ [AUTH CONTEXT] Erreur de connexion:', error);
+      console.error('❌ [AUTH CONTEXT] Type d\'erreur:', typeof error);
+      console.error('❌ [AUTH CONTEXT] Message:', error.message);
       
       // Gestion spéciale pour les erreurs d'extensions de navigateur
       if (error.message && error.message.includes('message channel closed')) {
+        console.warn('⚠️ [AUTH CONTEXT] Erreur d\'extension détectée');
         throw new Error('Erreur d\'extension de navigateur. Essayez en mode navigation privée.');
       }
       
       if (error.response) {
+        console.error('❌ [AUTH CONTEXT] Erreur serveur:', error.response.status, error.response.data);
         // Erreur de réponse du serveur
         throw new Error(error.response.data.message || 'Identifiants incorrects');
       } else if (error.request) {
+        console.error('❌ [AUTH CONTEXT] Erreur réseau:', error.request);
         // Erreur de réseau
         throw new Error('Impossible de contacter le serveur. Vérifiez votre connexion.');
       } else {
+        console.error('❌ [AUTH CONTEXT] Autre erreur:', error.message);
         // Autre erreur
         throw new Error('Erreur de connexion: ' + error.message);
       }
