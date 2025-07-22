@@ -5,12 +5,16 @@ import axios from 'axios';
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+// Debug mode pour voir les erreurs de connexion
+console.log('🔗 API_BASE_URL configurée:', API_BASE_URL);
+
 /**
  * Instance Axios configurée pour les appels API
  * Inclut automatiquement les tokens d'authentification et gère les erreurs
  */
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000, // Timeout de 10 secondes
 });
 
 /**
