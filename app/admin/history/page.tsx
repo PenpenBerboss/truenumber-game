@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api } from '../../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -9,14 +9,23 @@ import { History, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface GameHistoryItem {
   id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  random_number: number;
-  result: 'Gagné' | 'Perdu';
-  points_change: number;
-  balance_after: number;
-  created_at: string;
+  playerId?: string;
+  userId?: string;
+  playerName?: string;
+  userName?: string;
+  playerEmail?: string;
+  userEmail?: string;
+  targetNumber: number;
+  randomNumber?: number;
+  result?: 'Gagné' | 'Perdu';
+  won: boolean;
+  attempts: number;
+  guesses?: number[];
+  score: number;
+  pointsChange?: number;
+  balanceAfter?: number;
+  createdAt: string;
+  created_at?: string;
 }
 
 export default function AdminHistoryPage() {
@@ -26,10 +35,32 @@ export default function AdminHistoryPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await api.get('/users/history/all');
-        setHistory(response.data.history);
+        console.log('🔄 [AdminHistory] Récupération de l\'historique global...');
+        const response = await api.get('/admin/history');
+        console.log('📥 [AdminHistory] Réponse reçue:', response.data);
+        
+        // L'API retourne soit directement un tableau, soit { games: [...] }
+        const historyData = response.data?.games || response.data;
+        console.log('🎮 [AdminHistory] Données d\'historique extraites:', historyData);
+        
+        // S'assurer que la réponse est un tableau et mapper les données
+        const mappedHistory = Array.isArray(historyData) ? historyData.map((game: any) => ({
+          id: game.id || game._id,
+          playerId: game.playerId || game.userId || game.user_id,
+          playerName: game.playerName || game.userName || game.user_name || 'Utilisateur',
+          playerEmail: game.playerEmail || game.userEmail || game.user_email || 'email@example.com',
+          targetNumber: game.targetNumber || game.random_number,
+          won: game.won !== undefined ? game.won : (game.result === 'Gagné'),
+          attempts: game.attempts || 1,
+          guesses: game.guesses || [],
+          score: game.score || game.points_change || 0,
+          createdAt: game.createdAt || game.created_at
+        })) : [];
+        
+        setHistory(mappedHistory);
       } catch (error) {
-        console.error('Failed to fetch history:', error);
+        console.error('❌ [AdminHistory] Échec de la récupération de l\'historique:', error);
+        setHistory([]);
       } finally {
         setLoading(false);
       }
@@ -167,7 +198,7 @@ export default function AdminHistoryPage() {
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-purple-600">
-                          {new Set(history.map(g => g.user_id)).size}
+                          {new Set(history.map(g => g.playerId || g.userId)).size}
                         </div>
                         <div className="text-sm text-gray-500">Active Players</div>
                       </div>
@@ -187,11 +218,11 @@ export default function AdminHistoryPage() {
                           {/* Game Number Circle */}
                           <div className="flex-shrink-0">
                             <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-lg ${
-                              game.result === 'Gagné' 
+                              game.won 
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
                                 : 'bg-gradient-to-r from-red-500 to-rose-500'
                             }`}>
-                              {game.random_number}
+                              {game.targetNumber}
                             </div>
                           </div>
                           
@@ -199,40 +230,48 @@ export default function AdminHistoryPage() {
                           <div className="space-y-2">
                             <div className="flex items-center space-x-3">
                               <span className="text-xl font-bold text-gray-900">
-                                {game.user_name}
+                                {game.playerName}
                               </span>
                               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                {game.user_email}
+                                {game.playerEmail}
                               </span>
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                game.result === 'Gagné'
+                                game.won
                                   ? 'bg-green-100 text-green-800 border border-green-200'
                                   : 'bg-red-100 text-red-800 border border-red-200'
                               }`}>
-                                {game.result === 'Gagné' ? '🏆 Won' : '💸 Lost'}
+                                {game.won ? '🏆 Gagné' : '💸 Perdu'}
                               </span>
                             </div>
                             <div className="text-sm text-gray-600 flex items-center space-x-4">
                               <span className="flex items-center">
-                                📅 {new Date(game.created_at).toLocaleDateString()}
+                                📅 {new Date(game.createdAt || Date.now()).toLocaleDateString()}
                               </span>
                               <span className="flex items-center">
-                                🕒 {new Date(game.created_at).toLocaleTimeString()}
+                                🕒 {new Date(game.createdAt || Date.now()).toLocaleTimeString()}
+                              </span>
+                              <span className="flex items-center">
+                                🎯 {game.attempts} tentatives
                               </span>
                             </div>
                           </div>
                         </div>
                         
-                        {/* Balance Change */}
+                        {/* Score */}
                         <div className="text-right">
                           <div className={`text-2xl font-bold ${
-                            game.points_change > 0 ? 'text-green-600' : 'text-red-600'
+                            game.won ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {game.points_change > 0 ? '+' : ''}{game.points_change}
+                            {game.won ? `+${game.score}` : '0'} pts
                           </div>
                           <div className="text-sm text-gray-600">
-                            Balance: {game.balance_after.toLocaleString()}
+                            Nombre cible: {game.targetNumber}
                           </div>
+                          {game.guesses && game.guesses.length > 0 && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Essais: {game.guesses.join(' → ')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

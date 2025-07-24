@@ -13,16 +13,22 @@ import { Users, Plus, Edit, Trash2 } from 'lucide-react';
 
 /**
  * Interface définissant la structure d'un utilisateur pour l'administration
+ * Basée sur la structure MongoDB standard + propriétés spécifiques à l'app
  */
 interface User {
-  id: string;
+  _id?: string;  // MongoDB ID standard
+  id?: string;   // ID alternatif
   name: string;
-  username: string;
+  username?: string;
   email: string;
   phone?: string;
-  role: 'user' | 'admin';
-  balance: number;
-  created_at: string;
+  role?: 'user' | 'admin';
+  isAdmin?: boolean;  // Alternative au role
+  balance?: number;
+  score?: number;     // Alternative au balance
+  created_at?: string;
+  createdAt?: string; // Alternative camelCase
+  updatedAt?: string;
 }
 
 /**
@@ -50,10 +56,24 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔄 [AdminUsers] Récupération des utilisateurs...');
       const response = await api.get('/users');
-      setUsers(response.data); // L'API backend renvoie directement un tableau
+      console.log('📥 [AdminUsers] Réponse brute de l\'API:', response);
+      console.log('👥 [AdminUsers] Données utilisateurs reçues:', response.data);
+      
+      // Vérifier si la réponse est un tableau d'utilisateurs ou un objet wrappé
+      let usersData = response.data;
+      if (response.data && response.data.users) {
+        console.log('📦 [AdminUsers] Données wrappées détectées, extraction...');
+        usersData = response.data.users;
+      }
+      
+      console.log('✅ [AdminUsers] Données utilisateurs finales:', usersData);
+      setUsers(Array.isArray(usersData) ? usersData : []); // S'assurer que c'est un tableau
     } catch (error) {
+      console.error('❌ [AdminUsers] Erreur lors de la récupération des utilisateurs:', error);
       toast.error('Échec de la récupération des utilisateurs');
+      setUsers([]); // Définir un tableau vide en cas d'erreur
     } finally {
       setLoading(false);
     }
@@ -77,25 +97,28 @@ export default function AdminUsersPage() {
     if (!editingUser) return;
 
     try {
-      await api.put(`/users/${editingUser.id}`, formData);
-      toast.success('User updated successfully');
+      const userId = editingUser._id || editingUser.id;
+      await api.put(`/users/${userId}`, formData);
+      toast.success('Utilisateur mis à jour avec succès');
       fetchUsers();
       setEditingUser(null);
       resetForm();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update user');
+      console.error('❌ [AdminUsers] Erreur mise à jour utilisateur:', error);
+      toast.error(error.response?.data?.message || 'Échec de la mise à jour de l\'utilisateur');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
 
     try {
       await api.delete(`/users/${userId}`);
-      toast.success('User deleted successfully');
+      toast.success('Utilisateur supprimé avec succès');
       fetchUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
+      console.error('❌ [AdminUsers] Erreur suppression utilisateur:', error);
+      toast.error(error.response?.data?.message || 'Échec de la suppression de l\'utilisateur');
     }
   };
 
@@ -114,13 +137,13 @@ export default function AdminUsersPage() {
   const startEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
-      name: user.name,
-      username: user.username,
-      email: user.email,
+      name: user.name || '',
+      username: user.username || '',
+      email: user.email || '',
       phone: user.phone || '',
       password: '',
-      role: user.role,
-      balance: user.balance
+      role: (user.role || (user.isAdmin ? 'admin' : 'user')) as 'user' | 'admin',
+      balance: user.balance || user.score || 1000
     });
   };
 
@@ -335,33 +358,48 @@ export default function AdminUsersPage() {
             </Card>
           )}
 
-          {/* Users List */}
-          <div className="space-y-4">
-            {users.map((user, index) => (
-              <Card key={user.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+          {!Array.isArray(users) || users.length === 0 ? (
+            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="py-16">
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Users className="h-12 w-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-700 mb-2">Aucun Utilisateur Trouvé</h3>
+                  <p className="text-lg text-gray-500 mb-6">Aucun utilisateur n'est actuellement enregistré dans la base de données.</p>
+                  <div className="text-6xl mb-4">👥</div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Users List */}
+              <div className="space-y-4">
+                {users.map((user, index) => (
+              <Card key={user._id || user.id || index} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       {/* User Avatar */}
                       <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-white shadow-lg ${
-                        user.role === 'admin' 
+                        (user.role === 'admin' || user.isAdmin) 
                           ? 'bg-gradient-to-r from-purple-500 to-pink-500' 
                           : 'bg-gradient-to-r from-blue-500 to-cyan-500'
                       }`}>
-                        {user.name?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase() || '?'}
+                        {user.name?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       
                       {/* User Info */}
                       <div className="space-y-1">
                         <div className="flex items-center space-x-3">
-                          <h3 className="text-xl font-bold text-gray-900">{user.name || user.username || 'Nom non défini'}</h3>
-                          <span className="text-sm text-gray-500">@{user.username || 'username'}</span>
+                          <h3 className="text-xl font-bold text-gray-900">{user.name || user.username || user.email?.split('@')[0] || 'Utilisateur'}</h3>
+                          {user.username && <span className="text-sm text-gray-500">@{user.username}</span>}
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            user.role === 'admin'
+                            (user.role === 'admin' || user.isAdmin)
                               ? 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200'
                               : 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200'
                           }`}>
-                            {user.role === 'admin' ? '👑 Admin' : '👤 User'}
+                            {(user.role === 'admin' || user.isAdmin) ? '👑 Admin' : '👤 User'}
                           </span>
                         </div>
                         <p className="text-gray-600 flex items-center">
@@ -375,9 +413,9 @@ export default function AdminUsersPage() {
                         <div className="flex items-center space-x-6 text-sm text-gray-500 mt-2">
                           <span className="flex items-center space-x-1">
                             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                            <span>Balance: {user.balance.toLocaleString()}</span>
+                            <span>Balance: {(user.balance || user.score || 0).toLocaleString()}</span>
                           </span>
-                          <span>📅 Joined: {new Date(user.created_at).toLocaleDateString()}</span>
+                          <span>📅 Créé: {new Date(user.created_at || user.createdAt || Date.now()).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
@@ -395,7 +433,7 @@ export default function AdminUsersPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user._id || user.id || '')}
                         className="hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -404,28 +442,9 @@ export default function AdminUsersPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {users.length === 0 && (
-            <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="py-16">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Users className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-700 mb-2">No Users Found</h3>
-                  <p className="text-lg text-gray-500 mb-6">Get started by creating your first user account.</p>
-                  <Button 
-                    onClick={() => setShowCreateForm(true)}
-                    className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create First User
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -12,8 +12,10 @@ import { Dices, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface GameResult {
   result: 'gagné' | 'perdu';
-  generatedNumber: number;
+  randomNumber: number; // Nombre généré entre 0-100
+  pointsChange: number; // +50 ou -35
   newBalance: number;
+  message: string;
 }
 
 export default function GamePage() {
@@ -22,11 +24,12 @@ export default function GamePage() {
   const [lastGame, setLastGame] = useState<GameResult | null>(null);
 
   const playGame = async () => {
-    if (!user || user.balance < 100) {
-      toast.error('Solde insuffisant. Minimum 100 points requis pour jouer.');
+    if (!user) {
+      toast.error('Vous devez être connecté pour jouer.');
       return;
     }
 
+    // Pas de vérification de solde minimum - peut jouer même avec 0 ou négatif
     setLoading(true);
 
     try {
@@ -35,15 +38,16 @@ export default function GamePage() {
       
       setLastGame(gameResult);
       
-      // Update user balance
+      // Mettre à jour le solde de l'utilisateur
       updateUser({ ...user, balance: gameResult.newBalance });
       
       if (gameResult.result === 'gagné') {
-        toast.success(`🎉 Vous avez gagné ! Numéro: ${gameResult.generatedNumber}. Nouveau solde: ${gameResult.newBalance}`);
+        toast.success(`🎉 ${gameResult.message} | Nombre: ${gameResult.randomNumber} | +${gameResult.pointsChange} points`);
       } else {
-        toast.error(`😔 Vous avez perdu ! Numéro: ${gameResult.generatedNumber}. Nouveau solde: ${gameResult.newBalance}`);
+        toast.error(`😔 ${gameResult.message} | Nombre: ${gameResult.randomNumber} | ${gameResult.pointsChange} points`);
       }
     } catch (error: any) {
+      console.error('Erreur lors du jeu:', error);
       toast.error(error.response?.data?.message || 'Échec de la partie');
     } finally {
       setLoading(false);
@@ -94,44 +98,50 @@ export default function GamePage() {
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center">
                   <Dices className="h-7 w-7 mr-3 text-indigo-600" />
-                  Jouer
+                  TrueNumber Game
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base">
-                  Générer un nombre aléatoire entre 1-100
+                  Générer un nombre aléatoire entre 0 et 100
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="text-center space-y-6">
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                      <div className="text-lg font-bold text-blue-600">100</div>
-                      <p className="text-xs text-blue-600">Coût pour jouer</p>
-                    </div>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-                      <div className="text-lg font-bold text-green-600">+200</div>
-                      <p className="text-xs text-green-600">Gagné (&gt; 50)</p>
+                      <div className="text-lg font-bold text-green-600">+50</div>
+                      <p className="text-xs text-green-600">Gagné (&gt; 70)</p>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-red-50 to-rose-50 rounded-xl border border-red-100">
-                      <div className="text-lg font-bold text-red-600">-100</div>
-                      <p className="text-xs text-red-600">Perdu (≤ 50)</p>
+                      <div className="text-lg font-bold text-red-600">-35</div>
+                      <p className="text-xs text-red-600">Perdu (≤ 70)</p>
                     </div>
                   </div>
+
+                  <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                    <h4 className="font-bold text-blue-900 mb-2">📋 Règles du jeu</h4>
+                    <ul className="text-sm text-blue-800 space-y-1 text-left">
+                      <li>• Un nombre entre 0 et 100 est généré</li>
+                      <li>• Si le nombre est &gt; 70, vous gagnez +50 points</li>
+                      <li>• Si le nombre est ≤ 70, vous perdez -35 points</li>
+                      <li>• Vous pouvez jouer même avec un solde négatif</li>
+                    </ul>
+                  </div>
                   
-                  <Button
+                                    <Button
                     onClick={playGame}
-                    disabled={loading || !user || user.balance < 100}
+                    disabled={loading || !user}
                     size="lg"
                     className="w-full h-14 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                   >
                     {loading ? (
                       <div className="flex items-center space-x-2">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Lancement du dé...</span>
+                        <span>Génération du nombre...</span>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2">
                         <Dices className="h-5 w-5" />
-                        <span>Lancer le Nombre</span>
+                        <span>Générer un nombre</span>
                       </div>
                     )}
                   </Button>
@@ -165,21 +175,29 @@ export default function GamePage() {
                   <div className="text-center space-y-6">
                     <div className="relative">
                       <div className={`text-8xl font-black mb-4 ${lastGame.result === 'gagné' ? 'text-green-600' : 'text-red-600'}`}>
-                        {lastGame.generatedNumber}
+                        {lastGame.randomNumber}
                       </div>
                       <div className="absolute -top-2 -right-2">
                         {lastGame.result === 'gagné' ? '🎉' : '💔'}
                       </div>
                     </div>
                     
-                    <div className={`text-3xl font-bold ${lastGame.result === 'gagné' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`text-2xl font-bold ${lastGame.result === 'gagné' ? 'text-green-600' : 'text-red-600'}`}>
                       {lastGame.result === 'gagné' ? '🏆 Vous avez gagné!' : '💸 Vous avez perdu!'}
                     </div>
-                    
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-500 mb-1">New Balance</div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {lastGame.newBalance.toLocaleString()} points
+
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div className="text-sm text-gray-600">
+                        Nombre généré: <span className="font-bold">{lastGame.randomNumber}</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Seuil de victoire: <span className="font-bold">&gt; 70</span>
+                      </div>
+                      <div className={`text-lg font-bold ${lastGame.pointsChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {lastGame.pointsChange > 0 ? '+' : ''}{lastGame.pointsChange} points
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Nouveau solde: <span className="font-bold">{lastGame.newBalance}</span>
                       </div>
                     </div>
                   </div>
@@ -215,24 +233,24 @@ export default function GamePage() {
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
                   <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white font-bold text-xl">100</span>
+                    <span className="text-white font-bold text-xl">0-100</span>
                   </div>
-                  <div className="text-2xl font-bold text-blue-600 mb-2">Entry Fee</div>
-                  <p className="text-sm text-blue-600">Points required to play each game</p>
+                  <div className="text-2xl font-bold text-blue-600 mb-2">Random Range</div>
+                  <p className="text-sm text-blue-600">Numbers generated between 0 and 100</p>
                 </div>
                 <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100">
                   <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white font-bold text-xl">+200</span>
+                    <span className="text-white font-bold text-xl">+50</span>
                   </div>
                   <div className="text-2xl font-bold text-green-600 mb-2">Win Prize</div>
-                  <p className="text-sm text-green-600">Bonus when number is greater than 50</p>
+                  <p className="text-sm text-green-600">Points gained when number is above 70</p>
                 </div>
                 <div className="text-center p-6 bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl border border-red-100">
                   <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white font-bold text-xl">-100</span>
+                    <span className="text-white font-bold text-xl">-35</span>
                   </div>
                   <div className="text-2xl font-bold text-red-600 mb-2">Loss</div>
-                  <p className="text-sm text-red-600">Deduction when number is 50 or below</p>
+                  <p className="text-sm text-red-600">Points lost when number is 70 or below</p>
                 </div>
               </div>
             </CardContent>

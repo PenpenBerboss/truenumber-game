@@ -8,15 +8,27 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { History, TrendingUp, TrendingDown } from 'lucide-react';
 
 /**
- * Interface définissant la structure d'un élément d'historique de jeu
+ * Interface pour les statistiques retournées par l'API
+ */
+interface GameStats {
+  totalGames: number;
+  gamesWon: number;
+  gamesLost: number;
+  winRate: number;
+  averageScore: number;
+}
+
+/**
+ * Interface définissant la structure d'un élément d'historique de jeu selon l'API
  */
 interface GameHistoryItem {
-  gameId: string;
-  date: string;
-  generatedNumber: number;
-  result: 'Gagné' | 'Perdu';
-  balanceChange: number;
-  newBalance: number;
+  id: string;
+  targetNumber: number;
+  guesses: number[];
+  attempts: number;
+  won: boolean;
+  score: number;
+  createdAt: string;
 }
 
 /**
@@ -25,15 +37,46 @@ interface GameHistoryItem {
  */
 export default function HistoryPage() {
   const [history, setHistory] = useState<GameHistoryItem[]>([]);
+  const [stats, setStats] = useState<GameStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
+        console.log('🔄 [History] Récupération de l\'historique...');
         const response = await api.get('/history');
-        setHistory(response.data);
+        console.log('📥 [History] Réponse complète reçue:', response.data);
+        
+        // L'API retourne { games: [...], stats: {...} }
+        const historyData = response.data?.games || response.data;
+        const statsData = response.data?.stats;
+        
+        console.log('🎮 [History] Données d\'historique extraites:', historyData);
+        console.log('📊 [History] Statistiques extraites:', statsData);
+        
+        // S'assurer que la réponse est un tableau
+        setHistory(Array.isArray(historyData) ? historyData : []);
+        
+        // Définir les statistiques (de l'API ou calculées localement)
+        if (statsData) {
+          setStats(statsData);
+        } else if (Array.isArray(historyData)) {
+          // Calculer les stats localement si l'API ne les fournit pas
+          const localStats: GameStats = {
+            totalGames: historyData.length,
+            gamesWon: historyData.filter(g => g.won).length,
+            gamesLost: historyData.filter(g => !g.won).length,
+            winRate: historyData.length > 0 ? (historyData.filter(g => g.won).length / historyData.length) * 100 : 0,
+            averageScore: historyData.length > 0 ? historyData.reduce((sum, g) => sum + (g.score || 0), 0) / historyData.length : 0
+          };
+          setStats(localStats);
+          console.log('📊 [History] Statistiques calculées localement:', localStats);
+        }
       } catch (error) {
-        console.error('Échec de la récupération de l\'historique:', error);
+        console.error('❌ [History] Échec de la récupération de l\'historique:', error);
+        // En cas d'erreur, définir comme tableau vide
+        setHistory([]);
+        setStats(null);
       } finally {
         setLoading(false);
       }
@@ -99,7 +142,7 @@ export default function HistoryPage() {
             </p>
           </div>
 
-          {history.length === 0 ? (
+          {!Array.isArray(history) || history.length === 0 ? (
             <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="py-16">
                 <div className="text-center text-gray-500">
@@ -120,10 +163,10 @@ export default function HistoryPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mr-4">
-                        <span className="text-white font-bold text-lg">{history.length}</span>
+                        <span className="text-white font-bold text-lg">{stats?.totalGames || 0}</span>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-gray-900">{history.length}</div>
+                        <div className="text-2xl font-bold text-gray-900">{stats?.totalGames || 0}</div>
                         <div className="text-sm text-gray-500">Parties Totales</div>
                       </div>
                     </div>
@@ -138,9 +181,10 @@ export default function HistoryPage() {
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-green-600">
-                          {history.filter(g => g.result === 'Gagné').length}
+                          {stats?.gamesWon || 0}
                         </div>
                         <div className="text-sm text-gray-500">Parties Gagnées</div>
+                        <div className="text-xs text-gray-400">Taux: {stats?.winRate ? stats.winRate.toFixed(1) : '0'}%</div>
                       </div>
                     </div>
                   </CardContent>
@@ -154,9 +198,10 @@ export default function HistoryPage() {
                       </div>
                       <div>
                         <div className="text-2xl font-bold text-red-600">
-                          {history.filter(g => g.result === 'Perdu').length}
+                          {stats?.gamesLost || 0}
                         </div>
-                        <div className="text-sm text-gray-500">Games Lost</div>
+                        <div className="text-sm text-gray-500">Parties Perdues</div>
+                        <div className="text-xs text-gray-400">Score moyen: {stats?.averageScore ? stats.averageScore.toFixed(1) : '0'}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -165,20 +210,20 @@ export default function HistoryPage() {
 
               {/* Game History List */}
               <div className="space-y-4">
-                {history.map((game, index) => (
-                  <Card key={game.gameId} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
-                    <div className={`h-1 ${game.result === 'Gagné' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-rose-500'}`}></div>
+                {Array.isArray(history) && history.map((game, index) => (
+                  <Card key={game.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200">
+                    <div className={`h-1 ${game.won ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-rose-500'}`}></div>
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-6">
                           {/* Game Number Circle */}
                           <div className="flex-shrink-0">
                             <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-lg ${
-                              game.result === 'Gagné' 
+                              game.won 
                                 ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
                                 : 'bg-gradient-to-r from-red-500 to-rose-500'
                             }`}>
-                              {game.generatedNumber}
+                              {game.targetNumber}
                             </div>
                           </div>
                           
@@ -186,36 +231,39 @@ export default function HistoryPage() {
                           <div className="space-y-2">
                             <div className="flex items-center space-x-3">
                               <span className="text-xl font-bold text-gray-900">
-                                Game #{history.length - index}
+                                Game #{Array.isArray(history) ? history.length - index : 0}
                               </span>
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                game.result === 'Gagné'
+                                game.won
                                   ? 'bg-green-100 text-green-800 border border-green-200'
                                   : 'bg-red-100 text-red-800 border border-red-200'
                               }`}>
-                                {game.result === 'Gagné' ? '🏆 Won' : '💸 Lost'}
+                                {game.won ? '🏆 Gagné' : '💸 Perdu'}
                               </span>
                             </div>
                             <div className="text-sm text-gray-600 flex items-center space-x-4">
                               <span className="flex items-center">
-                                📅 {new Date(game.date).toLocaleDateString()}
+                                📅 {new Date(game.createdAt).toLocaleDateString()}
                               </span>
                               <span className="flex items-center">
-                                🕒 {new Date(game.date).toLocaleTimeString()}
+                                🕒 {new Date(game.createdAt).toLocaleTimeString()}
+                              </span>
+                              <span className="flex items-center">
+                                🎯 {game.attempts} tentatives
                               </span>
                             </div>
                           </div>
                         </div>
                         
-                        {/* Balance Change */}
+                        {/* Score */}
                         <div className="text-right">
                           <div className={`text-2xl font-bold ${
-                            game.balanceChange > 0 ? 'text-green-600' : 'text-red-600'
+                            game.won ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {game.balanceChange > 0 ? '+' : ''}{game.balanceChange}
+                            {game.won ? `+${game.score}` : '0'} pts
                           </div>
                           <div className="text-sm text-gray-600">
-                            Balance: {game.newBalance?.toLocaleString() || '0'}
+                            Nombre cible: {game.targetNumber}
                           </div>
                         </div>
                       </div>

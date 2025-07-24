@@ -83,7 +83,7 @@ export default function Navbar() {
                       Utilisateurs
                     </Button>
                   </Link>
-                  <Link href="/admin/history">
+                  <Link href="/admin">
                     <Button variant="ghost" size="sm" className="hover:bg-purple-50 hover:text-purple-600 transition-colors duration-200">
                       <Settings className="h-4 w-4 mr-2" />
                       Administration
@@ -197,7 +197,7 @@ export default function Navbar() {
                     </Button>
                   </Link>
                   
-                  <Link href="/admin/history" onClick={closeMobileMenu}>
+                  <Link href="/admin" onClick={closeMobileMenu}>
                     <Button 
                       variant="ghost" 
                       className="w-full justify-start hover:bg-purple-50 hover:text-purple-600 transition-colors duration-200"
